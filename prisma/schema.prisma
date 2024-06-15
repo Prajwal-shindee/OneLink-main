@@ -1,0 +1,82 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+generator zod {
+  provider              = "zod-prisma"
+  output                = "./zod"
+  relationModel         = true
+  modelCase             = "camelCase"
+  modelSuffix           = "Schema"
+  useDecimalJs          = true
+  prismaJsonNullability = true
+}
+
+datasource db {
+  provider = "postgresql"
+  url               = env("POSTGRES_PRISMA_URL") // uses connection pooling
+  directUrl         = env("POSTGRES_URL_NON_POOLING") // uses a direct connection
+  shadowDatabaseUrl = env("POSTGRES_URL_NON_POOLING") // us
+}
+
+model User {
+  id            String    @unique @default(cuid())
+  clerkId       String    @id
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  subscription Subscription?
+  pages        Page[]
+}
+
+model Subscription {
+  userId                 String    @unique
+  user                   User      @relation(fields: [userId], references: [clerkId])
+  stripeCustomerId       String    @unique @map(name: "stripe_customer_id")
+  stripeSubscriptionId   String?   @unique @map(name: "stripe_subscription_id")
+  stripePriceId          String?   @map(name: "stripe_price_id")
+  stripeCurrentPeriodEnd DateTime? @map(name: "stripe_current_period_end")
+
+  @@id([userId, stripeCustomerId])
+}
+
+model Page {
+  id          String     @id @default(cuid())
+  name        String
+  description String
+  slug        String     @unique
+  public      Boolean
+  userId      String
+  user        User       @relation(fields: [userId], references: [clerkId], onDelete: Cascade)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  pageLinks   PageLink[]
+  pageButtons PageButton[]
+  icon        String?
+  bgColor     String    @default("linear-gradient(0deg, rgba(2,0,36,1) 0%, rgba(9,9,121,1) 16%, rgba(0,212,255,1) 100%)")
+}
+
+model PageLink {
+  id     String @id @default(cuid())
+  title  String
+  url    String
+  page   Page   @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  pageId String
+  icon String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PageButton {
+  id     String @id @default(cuid())
+  title  String
+  url    String
+  page   Page   @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  pageId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
